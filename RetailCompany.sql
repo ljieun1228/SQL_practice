@@ -1,0 +1,125 @@
+
+--1번
+CREATE SEQUENCE customer_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE CUSTOMERS(
+ customer_id VARCHAR2(15) PRIMARY KEY,
+ customer_name VARCHAR2(15) NOT NULL,
+ contact_name VARCHAR2(15) NOT NULL,
+ address VARCHAR2(15) NOT NULL,
+ city VARCHAR2(15),
+ postal_code VARCHAR2(15) NOT NULL
+);
+
+--2번
+CREATE SEQUENCE employee_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE EMPLOYEES(
+ employee_id VARCHAR2(15) PRIMARY KEY,
+ last_name VARCHAR2(15) NOT NULL,
+ first_name VARCHAR2(15) NOT NULL,
+ birth_date VARCHAR2(15),
+ photo VARCHAR2(15),
+ notes VARCHAR2(15)
+);
+
+--3번
+CREATE SEQUENCE shipper_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE SHIPPERS(
+ shipper_id VARCHAR2(15) PRIMARY KEY,
+ shipper_name VARCHAR2(15) NOT NULL,
+ phone VARCHAR2(15) NOT NULL
+);
+
+--4번
+CREATE SEQUENCE supplier_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE SUPPLIERS(
+ supplier_id VARCHAR2(15) PRIMARY KEY,
+ supplier_name VARCHAR2(15) NOT NULL,
+ contact_name VARCHAR2(15) NOT NULL,
+ address VARCHAR2(15) NOT NULL,
+ city VARCHAR2(15) NOT NULL,
+ postal_code VARCHAR2(15) NOT NULL,
+ country VARCHAR2(15) NOT NULL,
+ phone VARCHAR2(15) NOT NULL
+);
+
+--5번
+CREATE SEQUENCE category_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE CATEGORIES(
+ category_id VARCHAR2(15) PRIMARY KEY,
+ category_name VARCHAR2(15) NOT NULL,
+ description VARCHAR2(15)
+);
+
+--6번
+
+CREATE SEQUENCE product_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE PRODUCTS(
+ product_id VARCHAR2(15) PRIMARY KEY,
+ product_name VARCHAR2(15) NOT NULL,
+ supplier_id VARCHAR2(15) NOT NULL,
+ category_id VARCHAR2(15) NOT NULL,
+ unit VARCHAR2(15) NOT NULL,
+ PRICE VARCHAR2(15) NOT NULL,
+ CONSTRAINT products_fk_suppliers FOREIGN KEY(supplier_id)
+    REFERENCES SUPPLIERS(supplier_id),
+ CONSTRAINT products_fk_categories FOREIGN KEY(category_id)
+    REFERENCES CATEGORIES(category_id)
+);
+
+
+--7번
+CREATE SEQUENCE order_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE ORDERS(
+ order_id VARCHAR2(15) PRIMARY KEY,
+ customer_id VARCHAR2(15) NOT NULL,
+ employee_id VARCHAR2(15) NOT NULL,
+ orderdate DATE DEFAULT SYSDATE NOT NULL,
+ shipper_id VARCHAR2(15) NOT NULL,
+ CONSTRAINT orders_fk_customers FOREIGN KEY(customer_id)
+    REFERENCES CUSTOMERS(customer_id),
+ CONSTRAINT orders_fk_employees FOREIGN KEY(employee_id)
+    REFERENCES EMPLOYEES(employee_id),
+ CONSTRAINT orders_fk_shippers FOREIGN KEY(shipper_id)
+    REFERENCES SHIPPERS(shipper_id)
+);
+
+
+--8번
+CREATE SEQUENCE orderdetail_id
+START WITH 1000
+INCREMENT BY 1;
+
+CREATE TABLE ORDERDETAILS(
+ orderdetail_id VARCHAR2(15) PRIMARY KEY,
+ order_id VARCHAR2(15) NOT NULL,
+ product_id VARCHAR2(15) NOT NULL,
+ quantity VARCHAR2(15) NOT NULL,
+ CONSTRAINT orderdetails_fk_orders FOREIGN KEY(order_id)
+    REFERENCES ORDERS(order_id),
+ CONSTRAINT orderdetails_fk_products FOREIGN KEY(product_id)
+    REFERENCES PRODUCTS(l)
+);
+
+
+SELECT * FROM tab;
