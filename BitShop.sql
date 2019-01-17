@@ -25,7 +25,6 @@ select *from Test;
 alter table test
 drop column test2;
 
-
 select * from article;
 
 drop table account;
