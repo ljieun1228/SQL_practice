@@ -168,19 +168,25 @@ FROM STADIUM S
 
 
  -- SOCCER_SQL_016
--- 평균키가 인천 유나이티스팀의 평균키 보다 작은 팀의 
+-- 팀의평균키가 유나이티드팀의 평균키 보다 작은 팀의 
 -- 팀ID, 팀명, 평균키 추출
-
-SELECT P.TEAM_ID, T.TEAM_NAME, ROUND(AVG(P.HEIGHT),2) 평균키
- FROM PLAYER P
- JOIN TEAM T 
-  ON T.TEAM_ID LIKE P.TEAM_ID
- WHERE P.HEIGHT < (SELECT ROUND(AVG(P.HEIGHT),2) AS HE
-         FROM PLAYER P
-        WHERE TEAM_ID LIKE 'K04')
-    GROUP BY P.TEAM_ID, T.TEAM_NAME
-    ORDER BY TEAM_NAME
-;
+---- 투매니 밸류~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SELECT T.TEAM_ID,T.TEAM_NAME,ROUND(AVG(P.HEIGHT),2) 평균키
+    FROM (SELECT HEIGHT,TEAM_ID
+          FROM PLAYER) P
+    JOIN TEAM T ON P.TEAM_ID LIKE T.TEAM_ID
+    GROUP BY T.TEAM_ID,T.TEAM_NAME
+    HAVING ROUND(AVG(P.HEIGHT),2)<(   
+                        SELECT TEAM_NAME, ROUND(AVG(HEIGHT),2)                    
+                        FROM PLAYER P
+                            JOIN TEAM T
+                            ON P.TEAM_ID = T.TEAM_ID
+                        GROUP BY T.TEAM_ID, T.TEAM_NAME
+                        HAVING TEAM_NAME LIKE '유나이티드'
+    )
+ ;
+ 
+ ---
 
 -- SOCCER_SQL_017
 -- 포지션이 MF 인 선수들의  소속팀명 및 선수명, 백넘버 출력
@@ -191,7 +197,7 @@ from team t
 where p.position like 'MF'
 order by player_name
 ;
---스칼라로 처리하기
+--스칼라로 처리할수있을까?
 SELECT t.team_name, p.player_name, p.back_no, p.position
 from team t
     join player p
@@ -201,31 +207,195 @@ order by player_name
 ;
 -- SOCCER_SQL_018
 -- 가장 키큰 선수 5 추출, 오라클, 단 키 값이 없으면 제외
-select   player_name, back_no, position, height
+select * from (
+select  player_name, back_no, position, height
 from player
-where 
-
+where height is not null
+order by height desc
+)
+where rownum < 6
+;
 -- SOCCER_SQL_019
--- 선수 자신이 속한 팀의 평균키보다 작은 선수 정보 출력
+-- 자신이 속한 팀의 평균키보다 작은 선수 정보 출력
+SELECT (SELECT T.TEAM_NAME
+        FROM TEAM T 
+        WHERE T.TEAM_ID LIKE P.TEAM_ID )팀명
+        ,P.PLAYER_NAME
+        ,P.POSITION
+        ,P.BACK_NO
+        ,P.HEIGHT
+        ,P2."평균키"
+FROM PLAYER P
+     JOIN (SELECT *
+                FROM (
+                    SELECT TEAM_ID, ROUND(AVG(HEIGHT),2)평균키
+                    FROM PLAYER
+                    GROUP BY TEAM_ID)) P2
+      ON P.TEAM_ID LIKE P2.TEAM_ID 
+WHERE P.HEIGHT < P2."평균키"
+ORDER BY PLAYER_NAME
+;
+
+-- 팀별 평균키
+SELECT * FROM (
+        SELECT TEAM_ID, ROUND(AVG(HEIGHT),2)평균키
+        FROM PLAYER
+        GROUP BY TEAM_ID)
+;
 
 -- SOCCER_SQL_020
 -- 2012년 5월 한달간 경기가 있는 경기장 조회
--- EXISTS 쿼리는 항상 연관쿼리로 상요한다.
+-- EXISTS 쿼리는 항상 연관쿼리로 사용한다.
 -- 또한 아무리 조건을 만족하는 건이 여러 건이라도
 -- 조건을 만족하는 1건만 찾으면 추가적인 검색을 진행하지 않는다.
+
+--8개 나온다..중복
+SELECT ST.STADIUM_ID, ST.STADIUM_NAME, SC.SCHE_DATE
+FROM STADIUM ST
+    JOIN (SELECT STADIUM_ID, SCHE_DATE
+    FROM SCHEDULE SC
+    WHERE SCHE_DATE LIKE '201205%')SC
+    ON SC.STADIUM_ID LIKE ST.STADIUM_ID
+    ORDER BY STADIUM_NAME
+;
+SELECT SCHE_DATE FROM SCHEDULE 
+    ORDER BY SCHE_DATE;
+
+ --답
+SELECT STADIUM_ID ID, STADIUM_NAME 경기장명
+FROM STADIUM S
+WHERE EXISTS(SELECT 1
+     FROM SCHEDULE SCH
+     WHERE SCH.STADIUM_ID LIKE S.STADIUM_ID
+     AND SCH.SCHE_DATE BETWEEN '20120501' AND '20120531');
+
+
+
+--- exists
+SELECT ST.STADIUM_ID, ST.STADIUM_NAME
+FROM STADIUM ST
+WHERE EXISTS(SELECT 1
+    FROM SCHEDULE SC
+    WHERE SC.STADIUM_ID LIKE ST.STADIUM_ID
+    AND SC.SCHE_DATE LIKE '201205%'
+)
+ORDER BY STADIUM_NAME
+;
+
+
+-- 201205월에 경기가 있는 스케줄
+SELECT STADIUM_ID, SCHE_DATE
+FROM SCHEDULE
+WHERE SCHE_DATE LIKE '201205%'
+;
 
 
 -- SOCCER_SQL_021
 -- 이현 선수 소속팀의 선수명단 출력
+SELECT P.TEAM_ID 팀명, PLAYER_NAME 선수명, POSITION 포지션, BACK_NO 백넘버
+FROM PLAYER P
+WHERE (
+SELECT TEAM_ID
+FROM PLAYER
+WHERE PLAYER_NAME LIKE '이현') LIKE P.TEAM_ID 
+ORDER BY PLAYER_NAME
+;
 
 -- SOCCER_SQL_022
 -- NULL 처리에 있어
 -- SUM(NVL(SAL,0)) 로 하지말고
 -- NVL(SUM(SAL),0) 으로 해야 자원낭비가 줄어든다
- 
 -- 팀별 포지션별 인원수와 팀별 전체 인원수 출력
- 
 -- Oracle, Simple Case Expr
+
 
 -- SOCCER_SQL_023
 -- GROUP BY 절 없이 전체 선수들의 포지션별 평균 키 및 전체 평균 키 출력
+SELECT DISTINCT
+(SELECT ROUND(AVG(HEIGHT),2)
+FROM PLAYER P
+WHERE P.POSITION LIKE 'MF')미드필더키, 
+(SELECT ROUND(AVG(HEIGHT),2)
+FROM PLAYER P
+WHERE P.POSITION LIKE 'MF')포워드키, 
+(SELECT ROUND(AVG(HEIGHT),2)
+FROM PLAYER P
+WHERE P.POSITION LIKE 'MF')디펜더키, 
+(SELECT ROUND(AVG(HEIGHT),2)
+FROM PLAYER P
+WHERE P.POSITION LIKE 'MF')골키퍼키, 
+(SELECT ROUND(AVG(HEIGHT),2)
+FROM PLAYER P)전체평균키
+FROM PLAYER
+;
+
+-- SOCCER_SQL_024 
+-- 소속팀별 키가 가장 작은 사람들의 정보
+
+--팀 이름 , 제일 작은 키 
+SELECT T.TEAM_ID 팀아이디, T.TEAM_NAME 팀명, P.PLAYER_NAME 선수, P.POSITION 포지션, P.BACK_NO 백넘버, P1."키"
+FROM  TEAM T
+    JOIN(SELECT TEAM_ID, MIN(HEIGHT)키
+        FROM PLAYER 
+        GROUP BY TEAM_ID) P1
+    ON T.TEAM_ID LIKE P1.TEAM_ID
+    JOIN PLAYER P
+    ON P1.TEAM_ID LIKE P.TEAM_ID
+WHERE P.HEIGHT LIKE P1."키"
+ORDER BY "팀아이디", "선수"
+;
+
+-- SOCCER_SQL_026 
+-- 20120501 부터 20120602 사이에 경기가 있는 경기장 조회
+SELECT ST.STADIUM_ID, ST.STADIUM_NAME, SC.SCHE_DATE
+FROM STADIUM ST
+    JOIN SCHEDULE SC
+    ON SC.HOMETEAM_ID = ST.HOMETEAM_ID
+WHERE SCHE_DATE BETWEEN 20120501 AND 20120602
+--ORDER BY STADIUM_NAME
+;
+
+-- SOCCER_SQL_027 
+-- 선수정보와 해당 선수가 속한  팀의 평균키 조회
+-- 단, 정렬시 평균키 내림차순
+
+--팀별 평균키
+SELECT * FROM (
+        SELECT TEAM_ID, ROUND(AVG(HEIGHT),2)평균키
+        FROM PLAYER
+        GROUP BY TEAM_ID)
+;
+
+SELECT (SELECT TEAM_NAME 
+        FROM TEAM T
+        WHERE P.TEAM_ID LIKE TEAM_ID)팀이름, P.PLAYER_NAME, P.HEIGHT, P1."평균키"
+FROM PLAYER P
+    JOIN (SELECT * FROM (
+        SELECT TEAM_ID, ROUND(AVG(HEIGHT),3)평균키
+        FROM PLAYER
+        GROUP BY TEAM_ID))P1
+    ON P.TEAM_ID LIKE P1.TEAM_ID
+ORDER BY "평균키" DESC
+;
+
+-- SOCCER_SQL_028 
+-- 팀의평균키가 삼성블루윙즈팀의 평균키보다 작은 팀의 
+-- 이름과 해당 팀의 평균키
+
+
+-- 팀명, 팀이름, 평균키 
+SELECT (SELECT TEAM_NAME FROM TEAM T WHERE T.TEAM_ID LIKE P.TEAM_ID)팀명, TEAM_ID 팀이름, ROUND(AVG(HEIGHT),2)평균키
+        FROM PLAYER P
+        GROUP BY TEAM_ID
+;
+
+
+
+
+-- SOCCER_SQL_029 
+-- 드래곤즈,FC서울,일화천마 각각의 팀 소속의 GK, MF 선수 정보
+
+
+-- SOCCER_SQL_030 
+-- 29번에서 제시한 팀과 포지션이 아닌 선수들의 수
+
